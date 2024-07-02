@@ -35,7 +35,12 @@ function createAudioSource(leftFile, rightFile, index) {
   stopButton.textContent = `Stop Step ${index + 1}`;
   stopButton.onclick = () => stopAudio(index);
 
+  const volLabel = document.createElement('label');
+  volLabel.innerText = 'Volume: ';
+  volLabel.for = 'volume';
+
   const volumeSlider = document.createElement('input');
+  volumeSlider.name = 'volume';
   volumeSlider.type = 'range';
   volumeSlider.min = 0;
   volumeSlider.max = 1;
@@ -43,9 +48,25 @@ function createAudioSource(leftFile, rightFile, index) {
   volumeSlider.value = 1; 
   volumeSlider.oninput = (event) => changeVolume(index, event.target.value);
 
+  const stretchLabel = document.createElement('label');
+  stretchLabel.innerText = 'Timestretch: ';
+  stretchLabel.for = 'timestretch';
+
+  const stretchSlider = document.createElement('input');
+  stretchSlider.name = 'timestretch';
+  stretchSlider.type = 'range';
+  stretchSlider.min = 0;
+  stretchSlider.max = 2;
+  stretchSlider.step = 0.01;
+  stretchSlider.value = 1; 
+  stretchSlider.oninput = (event) => timeStretch(index, event.target.value);
+
   sourceContainer.appendChild(playButton);
   sourceContainer.appendChild(stopButton);
+  sourceContainer.appendChild(volLabel);
   sourceContainer.appendChild(volumeSlider);
+  sourceContainer.appendChild(stretchLabel);
+  sourceContainer.appendChild(stretchSlider);
   controlsContainer.appendChild(sourceContainer);
 }
 
@@ -87,6 +108,14 @@ function changeVolume(index, volume) {
   if (sources) {
     sources.gainNode.gain.value = volume;
   }
+}
+
+function timeStretch(index, value){
+    const sources = activeSources[index];
+    if(sources){
+        sources.leftSource.playbackRate.linearRampToValueAtTime(value, audioContext.currentTime + 0.05);
+        sources.rightSource.playbackRate.linearRampToValueAtTime(value, audioContext.currentTime + 0.05);
+    }
 }
 
 async function loadAudioFile(filePath) {
