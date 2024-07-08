@@ -1,0 +1,14 @@
+const audioFiles = [
+  { left: './audio/freya-1.mp3', right: './audio/tom-1.mp3' },
+  { left: './audio/freya-2.mp3', right: './audio/tom-2.mp3' },
+  { left: './audio/freya-3.mp3', right: './audio/tom-3.mp3' },
+  { left: './audio/freya-4.mp3', right: './audio/tom-4.mp3' },
+  { left: './audio/freya-5.mp3', right: './audio/tom-5.mp3' },
+  { left: './audio/freya-6.mp3', right: './audio/tom-6.mp3' },
+  { left: './audio/freya-7.mp3', right: './audio/tom-7.mp3' },
+  { left: './audio/freya-8.mp3', right: './audio/tom-8.mp3' },
+  { left: './audio/freya-9.mp3', right: './audio/tom-9.mp3' },
+  { left: './audio/freya-10.mp3', right: './audio/tom-10.mp3' },
+  { left: './audio/freya-11.mp3', right: './audio/tom-11.mp3' },
+  { left: './audio/freya-12.mp3', right: './audio/tom-12.mp3' },
+];
