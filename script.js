@@ -80,6 +80,11 @@ function createAudioSource(leftFile, rightFile, index) {
   bitcrushSlider.value = 16;
   bitcrushSlider.oninput = (event) => applyBitcrush(index, event.target.value);
 
+  // Reverse channels
+  const reverseButton = document.createElement('button');
+  reverseButton.textContent = 'Reverse Channels';
+  reverseButton.onclick = () => reverseChannels(index);
+
   sourceContainer.appendChild(playButton);
   sourceContainer.appendChild(stopButton);
   sourceContainer.appendChild(volLabel);
@@ -88,10 +93,11 @@ function createAudioSource(leftFile, rightFile, index) {
   sourceContainer.appendChild(stretchSlider);
   sourceContainer.appendChild(bitcrushLabel);
   sourceContainer.appendChild(bitcrushSlider);
+  sourceContainer.appendChild(reverseButton);
   controlsContainer.appendChild(sourceContainer);
 }
 
-async function playAudio(leftFile, rightFile, index) {
+async function playAudio(leftFile, rightFile, index, reverse = false) {
   const leftBuffer = await loadAudioFile(leftFile);
   const rightBuffer = await loadAudioFile(rightFile);
 
@@ -106,19 +112,22 @@ async function playAudio(leftFile, rightFile, index) {
   const leftBitcrusherNode = createBitcrusherNode();
   const rightBitcrusherNode = createBitcrusherNode();
 
-  // Create a low-pass filter for the left channel
-  const leftLowPassFilter = audioContext.createBiquadFilter();
-  leftLowPassFilter.type = 'lowpass';
-  leftLowPassFilter.frequency.value = 1000; // Adjust the frequency as needed
-
   // Create a merger
   const merger = audioContext.createChannelMerger(2);
 
-  // Connect left source to the left channel chain
-  leftSource.connect(leftGainNode).connect(leftLowPassFilter).connect(leftBitcrusherNode).connect(merger, 0, 0);
+  if(reverse){
+      // Connect right source to the left channel chain
+      rightSource.connect(leftGainNode).connect(leftBitcrusherNode).connect(merger, 0, 0);
+
+      // Connect right source to the right channel chain
+      leftSource.connect(rightGainNode).connect(rightBitcrusherNode).connect(merger, 0, 1);
+  } else {
+      // Connect left source to the left channel chain
+      rightSource.connect(leftGainNode).connect(leftBitcrusherNode).connect(merger, 0, 0);
   
-  // Connect right source to the right channel chain
-  rightSource.connect(rightGainNode).connect(rightBitcrusherNode).connect(merger, 0, 1);
+      // Connect right source to the right channel chain
+      leftSource.connect(rightGainNode).connect(rightBitcrusherNode).connect(merger, 0, 1);
+  }
 
   // Connect merger to audio context destination
   merger.connect(audioContext.destination);
@@ -126,7 +135,7 @@ async function playAudio(leftFile, rightFile, index) {
   leftSource.start();
   rightSource.start();
 
-  activeSources[index] = { leftSource, rightSource, leftGainNode, rightGainNode, leftBitcrusherNode, rightBitcrusherNode, leftLowPassFilter, merger };
+  activeSources[index] = { leftSource, rightSource, leftGainNode, rightGainNode, leftBitcrusherNode, rightBitcrusherNode, merger };
 }
 
 function stopAudio(index) {
@@ -193,4 +202,18 @@ function createBitcrusherNode() {
   };
 
   return node;
+}
+
+function reverseChannels(index) {
+  const sources = activeSources[index];
+  if (sources) {
+    const { leftSource, rightSource } = sources;
+
+    // Stop current playback
+    leftSource.stop();
+    rightSource.stop();
+
+    // Play with channels reversed
+    playAudio(audioFiles[index].right, audioFiles[index].left, index, true);
+  }
 }
