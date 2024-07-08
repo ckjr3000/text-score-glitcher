@@ -97,20 +97,32 @@ async function playAudio(leftFile, rightFile, index) {
   leftSource.buffer = leftBuffer;
   rightSource.buffer = rightBuffer;
 
-  const merger = audioContext.createChannelMerger(2);
-  const gainNode = audioContext.createGain();
-  const bitcrusherNode = createBitcrusherNode();
+  const leftGainNode = audioContext.createGain();
+  const rightGainNode = audioContext.createGain();
+  const leftBitcrusherNode = createBitcrusherNode();
+  const rightBitcrusherNode = createBitcrusherNode();
 
-  leftSource.connect(merger, 0, 0);
-  rightSource.connect(merger, 0, 1);
-  merger.connect(bitcrusherNode);
-  bitcrusherNode.connect(gainNode);
-  gainNode.connect(audioContext.destination);
+  // Create a low-pass filter for the left channel
+  const leftLowPassFilter = audioContext.createBiquadFilter();
+  leftLowPassFilter.type = 'lowpass';
+  leftLowPassFilter.frequency.value = 1000; // Adjust the frequency as needed
+
+  // Create a merger
+  const merger = audioContext.createChannelMerger(2);
+
+  // Connect left source to the left channel chain
+  leftSource.connect(leftGainNode).connect(leftLowPassFilter).connect(leftBitcrusherNode).connect(merger, 0, 0);
+  
+  // Connect right source to the right channel chain
+  rightSource.connect(rightGainNode).connect(rightBitcrusherNode).connect(merger, 0, 1);
+
+  // Connect merger to audio context destination
+  merger.connect(audioContext.destination);
 
   leftSource.start();
   rightSource.start();
 
-  activeSources[index] = { leftSource, rightSource, gainNode, bitcrusherNode };
+  activeSources[index] = { leftSource, rightSource, leftGainNode, rightGainNode, leftBitcrusherNode, rightBitcrusherNode, leftLowPassFilter, merger };
 }
 
 function stopAudio(index) {
@@ -125,7 +137,8 @@ function stopAudio(index) {
 function changeVolume(index, volume) {
   const sources = activeSources[index];
   if (sources) {
-    sources.gainNode.gain.value = volume;
+    sources.leftGainNode.gain.value = volume;
+    sources.rightGainNode.gain.value = volume;
   }
 }
 
@@ -140,7 +153,8 @@ function timeStretch(index, value) {
 function applyBitcrush(index, value) {
   const sources = activeSources[index];
   if (sources) {
-    sources.bitcrusherNode.bits = value;
+    sources.leftBitcrusherNode.bits = value;
+    sources.rightBitcrusherNode.bits = value;
   }
 }
 
