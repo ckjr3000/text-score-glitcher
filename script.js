@@ -44,7 +44,7 @@ function createAudioSource(leftFile, rightFile, index) {
   volLabel.for = 'volume';
 
   const volumeSlider = document.createElement('input');
-  volumeSlider.id = `volume-${index}`;
+  volumeSlider.id =  `volume-${index}`;
   volumeSlider.name = 'volume';
   volumeSlider.type = 'range';
   volumeSlider.min = 0;
@@ -77,8 +77,8 @@ function createAudioSource(leftFile, rightFile, index) {
   bitcrushSlider.id = `bitcrush-${index}`;
   bitcrushSlider.name = 'bitcrush';
   bitcrushSlider.type = 'range';
-  bitcrushSlider.min = 1; // Start at 16 bits (no crush)
-  bitcrushSlider.max = 16; // Go down to 1 bit
+  bitcrushSlider.min = 1; 
+  bitcrushSlider.max = 16; 
   bitcrushSlider.step = 1;
   bitcrushSlider.value = 16;
   bitcrushSlider.oninput = (event) => applyBitcrush(index, event.target.value);
@@ -100,7 +100,7 @@ function createAudioSource(leftFile, rightFile, index) {
   controlsContainer.appendChild(sourceContainer);
 }
 
-async function playAudio(leftFile, rightFile, index) {
+async function playAudio(leftFile, rightFile, index, reverse = false) {
   const leftBuffer = await loadAudioFile(leftFile);
   const rightBuffer = await loadAudioFile(rightFile);
 
@@ -115,45 +115,38 @@ async function playAudio(leftFile, rightFile, index) {
   const leftBitcrusherNode = createBitcrusherNode();
   const rightBitcrusherNode = createBitcrusherNode();
 
-  // Connect nodes
-  leftSource.connect(leftGainNode).connect(leftBitcrusherNode).connect(audioContext.destination);
-  rightSource.connect(rightGainNode).connect(rightBitcrusherNode).connect(audioContext.destination);
+  // Take the bitcrush value from the input slider before playing
+  const bitCrushInput = document.getElementById(`bitcrush-${index}`);
+  const bitCrushValue = bitCrushInput.value;
 
-  // Volume control
-  const volumeSlider = document.getElementById(`volume-${index}`);
-  volumeSlider.oninput = (event) => {
-    leftGainNode.gain.value = event.target.value;
-    rightGainNode.gain.value = event.target.value;
-  };
+  leftBitcrusherNode.bits = bitCrushValue;
+  rightBitcrusherNode.bits = bitCrushValue;
 
-  // Timestretch control
-  const stretchSlider = document.getElementById(`timestretch-${index}`);
-  stretchSlider.oninput = (event) => {
-    leftSource.playbackRate.value = event.target.value;
-    rightSource.playbackRate.value = event.target.value;
-  };
+  const timeStretchInput = document.getElementById(`timestretch-${index}`);
+  const timeStretchValue = timeStretchInput.value;
+
+  leftSource.playbackRate.value = timeStretchValue;
+  rightSource.playbackRate.value = timeStretchValue;
+
+  const merger = audioContext.createChannelMerger(2);
+
+  if(reverse){
+      rightSource.connect(leftGainNode).connect(leftBitcrusherNode).connect(merger, 0, 0);
+
+      leftSource.connect(rightGainNode).connect(rightBitcrusherNode).connect(merger, 0, 1);
+  } else {
+      rightSource.connect(leftGainNode).connect(leftBitcrusherNode).connect(merger, 0, 0);
   
-  // Apply initial timestretch value
-  leftSource.playbackRate.value = stretchSlider.value;
-  rightSource.playbackRate.value = stretchSlider.value;
+      leftSource.connect(rightGainNode).connect(rightBitcrusherNode).connect(merger, 0, 1);
+  }
 
-  // Bitcrush control
-  const bitcrushSlider = document.getElementById(`bitcrush-${index}`);
-  bitcrushSlider.oninput = (event) => {
-    leftBitcrusherNode.bits = event.target.value;
-    rightBitcrusherNode.bits = event.target.value;
-  };
-
-  // Apply initial bitcrush value
-  leftBitcrusherNode.bits = bitcrushSlider.value;
-  rightBitcrusherNode.bits = bitcrushSlider.value;
+  merger.connect(audioContext.destination);
 
   leftSource.start();
   rightSource.start();
 
-  activeSources[index] = { leftSource, rightSource, leftGainNode, rightGainNode, leftBitcrusherNode, rightBitcrusherNode };
+  activeSources[index] = { leftSource, rightSource, leftGainNode, rightGainNode, leftBitcrusherNode, rightBitcrusherNode, merger };
 }
-
 
 function stopAudio(index) {
   const sources = activeSources[index];
